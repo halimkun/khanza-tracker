@@ -36,15 +36,18 @@ class MoveTrackerToLog extends Command
      */
     public function handle()
     {
-        $month = $this->option('month') ?? date('Y-m');
+        \Carbon\Carbon::setLocale('id');
+        $month = $this->option('month') ?? \Carbon\Carbon::now()->subMonth()->format('Y-m');
 
         // Validasi format bulan
         if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
-            $this->error("Invalid month format. Please use 'YYYY-MM'.");
+            $errorMsg = "[" . date('Y-m-d H:i:s') . "] cron.error: [user] system, [task] Invalid month format. Please use 'YYYY-MM'.";
+            $this->error($errorMsg);
+
             return 1;
         }
 
-        $this->info("Processing month: $month");
+        $this->info("[" . date('Y-m-d H:i:s') . "] cron.info: [user] system, [task] Start processing tracker data for month: {$month}");
         $year = date('Y', strtotime($month));
 
         // Ambil semua data dari tabel tracker untuk bulan tertentu
@@ -55,11 +58,10 @@ class MoveTrackerToLog extends Command
 
         // count
         $count = $trackers->count();
-        $this->info("Total data: $count");
 
         // Jika tidak ada data, keluar
         if ($count == 0) {
-            $this->info('No data to process');
+            $this->info("[" . date('Y-m-d H:i:s') . "] cron.info: [user] system, [task] No tracker data found for month: {$month}");
             return 0;
         }
 
@@ -90,15 +92,15 @@ class MoveTrackerToLog extends Command
             file_put_contents($filePath, $logData, FILE_APPEND);
 
             // Informasi bahwa file berhasil ditulis
-            $this->info("Log file created: {$filePath}");
+            $this->info("[" . date('Y-m-d H:i:s') . "] cron.info: [user] system, [task] Tracker data for month {$month} ({$count} records) moved to log file: {$filePath}");
         } catch (\Exception $e) {
             // Tangani error penulisan file
-            $this->error("Error writing to log file: " . $e->getMessage());
+            $this->error("[" . date('Y-m-d H:i:s') . "] cron.error: [user] system, [task] Error writing log file: {$e->getMessage()}");
             return 1;
         }
 
         // Informasi tentang file yang berhasil dibuat
-        $this->info("Log file created: {$filename}");
+        // $this->info("[" . date('Y-m-d H:i:s') . "] cron.info: [user] system, [task] Tracker data for month {$month} ({$count} records) moved to log file: {$filename}");
 
         return 0;
     }
